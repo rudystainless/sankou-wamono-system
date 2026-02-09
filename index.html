@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sankou Wamono Order System</title>
+<style>
+  /* === 基本設定 === */
+  body { font-family: "Helvetica Neue", Arial, sans-serif; margin: 0; padding: 20px; background: #f9f9f9; color: #333; }
+  h2 { text-align: center; margin-bottom: 30px; }
+
+  /* === 商品リスト (Grid System) === */
+  .product-grid { 
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 15px; 
+    justify-content: center; /* 中央揃え */
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .item {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    width: 160px; /* カードの幅 */
+    padding: 10px;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+  }
+
+  /* 選択時のスタイル */
+  .item.selected {
+    border: 2px solid #333;
+    background-color: #fffbf0;
+  }
+
+  /* 画像エリア */
+  .img-container {
+    width: 100%;
+    height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fafafa;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .item img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .hinban { font-weight: bold; font-size: 14px; margin-bottom: 5px; }
+  .price { color: #d32f2f; font-weight: bold; font-size: 15px; margin-bottom: 10px; }
+
+  /* 数量入力エリア */
+  .qty-area { font-size: 13px; }
+  .order-qty {
+    width: 50px;
+    padding: 5px;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px; /* スマホでのズーム防止 */
+  }
+
+  /* === フッターフォーム === */
+  .footer-form {
+    max-width: 600px;
+    margin: 50px auto;
+    background: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    border-top: 5px solid #333;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+
+  .form-group { margin-bottom: 20px; }
+  .form-group label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 14px; }
+  .form-group input, .form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 16px;
+  }
+
+  /* 送信ボタン */
+  .submit-btn {
+    width: 100%;
+    padding: 15px;
+    background: #000;
+    color: #fff;
+    font-size: 18px;
+    font-weight: bold;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  .submit-btn:hover { background: #444; }
+  .submit-btn:disabled { background: #999; cursor: wait; }
+
+  /* === 状態表示 === */
+  #loading { text-align: center; padding: 50px; font-size: 18px; color: #666; }
+  #shop-container { display: none; }
+  #thanks-screen { display: none; text-align: center; padding: 60px 20px; }
+  .error-msg { color: red; text-align: center; margin-top: 15px; display: none; font-weight: bold; }
+
+  /* レスポンシブ対応 */
+  @media (max-width: 600px) {
+    .product-grid { gap: 10px; }
+    .item { width: 45%; } /* スマホでは2列表示 */
+  }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <p>商品データを読み込み中...</p>
+  <p style="font-size:12px; color:#999;">(初回の読み込みには数秒かかる場合があります)</p>
+</div>
+
+<div id="shop-container">
+  <h2>商品カタログ</h2>
+  
+  <div class="product-grid" id="product-list">
+    </div>
+
+  <div class="footer-form">
+    <h3>お届け先情報</h3>
+    
+    <div class="form-group">
+      <label>会社名 <span style="color:red">*</span></label>
+      <input type="text" id="kaisha" placeholder="例: 株式会社サンプル">
+    </div>
+
+    <div class="form-group">
+      <label>ご担当者名 <span style="color:red">*</span></label>
+      <input type="text" id="tantousha" placeholder="例: 山田 太郎">
+    </div>
+
+    <div class="form-group">
+      <label>メールアドレス <span style="color:red">*</span></label>
+      <input type="email" id="mail" placeholder="例: info@example.com">
+    </div>
+
+    <div class="form-group">
+      <label>電話番号 <span style="color:red">*</span></label>
+      <input type="tel" id="tel" placeholder="例: 03-1234-5678">
+    </div>
+
+    <div class="form-group">
+      <label>備考</label>
+      <textarea id="bikou" rows="3" placeholder="ご要望などあればご記入ください"></textarea>
+    </div>
+
+    <button class="submit-btn" onclick="sendOrder()">注文を確定する</button>
+    <div id="submit-error" class="error-msg"></div>
+  </div>
+</div>
+
+<div id="thanks-screen">
+  <h2 style="color:#2ecc71;">ご注文ありがとうございました</h2>
+  <p>ご入力いただいたメールアドレスへ確認メールを送信しました。</p>
+  <p>内容を確認の上、担当者より改めてご連絡いたします。</p>
+</div>
+
+<script>
+  // ★GASのウェブアプリURL (更新済み)
+  const GAS_API_URL = 'https://script.google.com/macros/s/AKfycby-LJx03ABMCGNX480f0MyARPP1FPY4suwzRajHLTOj1fLb-AoqZDz0NtiI84sIcOty/exec';
+
+  // 1. ページ読み込み完了時に商品データを取得
+  document.addEventListener('DOMContentLoaded', async () => {
+    try {
+      // GAS側へ商品リストをリクエスト
+      const response = await fetch(`${GAS_API_URL}?op=getProducts`);
+      const data = await response.json();
+      
+      if (data.ok) {
+        renderProducts(data.products);
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('shop-container').style.display = 'block';
+      } else {
+        throw new Error(data.error || 'データ取得エラー');
+      }
+    } catch (e) {
+      console.error(e);
+      document.getElementById('loading').innerHTML = 
+        `<span style="color:red;">商品データの読み込みに失敗しました。<br>ページを再読み込みしてください。</span>`;
+    }
+  });
+
+  // 2. 商品リストを描画する関数
+  function renderProducts(products) {
+    const container = document.getElementById('product-list');
+    
+    products.forEach(p => {
+      // 画像URL生成 (Google DriveのIDを使用)
+      const imgSrc = p.imageId 
+        ? `https://drive.google.com/uc?export=view&id=${p.imageId}`
+        : 'https://via.placeholder.com/150x150?text=No+Image'; // 画像がない場合のダミー
+
+      // HTMLカード生成
+      const html = `
+        <div class="item" data-hinban="${p.hinban}" data-price="${p.price}">
+          <div class="img-container">
+            <img src="${imgSrc}" loading="lazy" alt="${p.hinban}">
+          </div>
+          <div class="hinban">${p.hinban}</div>
+          <div class="price">¥${Number(p.price).toLocaleString()}</div>
+          <div class="qty-area">
+            数量: <input type="number" class="order-qty" min="0" value="0" onchange="checkActive(this)">
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', html);
+    });
+  }
+
+  // 3. 数量変更時のスタイル制御
+  function checkActive(input) {
+    const item = input.closest('.item');
+    const val = parseInt(input.value, 10);
+    if (val > 0) {
+      item.classList.add('selected');
+      input.style.borderColor = "#333";
+      input.style.fontWeight = "bold";
+    } else {
+      item.classList.remove('selected');
+      input.style.borderColor = "#ccc";
+      input.style.fontWeight = "normal";
+    }
+  }
+
+  // 4. 注文送信処理
+  async function sendOrder() {
+    // 数量が1以上の商品のみ収集
+    const items = [];
+    document.querySelectorAll('.item').forEach(el => {
+      const q = parseInt(el.querySelector('.order-qty').value, 10) || 0;
+      if (q > 0) {
+        items.push({
+          hinban: el.dataset.hinban,
+          joudai: Number(el.dataset.price),
+          suryo: q
+        });
+      }
+    });
+
+    if (items.length === 0) {
+      alert("商品が選択されていません。数量を入力してください。");
+      return;
+    }
+
+    // フォームデータの収集
+    const form = {
+      kaisha: document.getElementById('kaisha').value.trim(),
+      tantousha: document.getElementById('tantousha').value.trim(),
+      mail: document.getElementById('mail').value.trim(),
+      tel: document.getElementById('tel').value.trim(),
+      bikou: document.getElementById('bikou').value.trim(),
+      items: items
+    };
+
+    // 必須項目のチェック
+    if (!form.kaisha || !form.tantousha || !form.mail || !form.tel) {
+      alert("必須項目(*)を入力してください。");
+      return;
+    }
+
+    // ボタンを無効化して送信中表示へ
+    const btn = document.querySelector('.submit-btn');
+    btn.disabled = true;
+    btn.innerText = "送信中... (そのままお待ちください)";
+    document.getElementById('submit-error').style.display = 'none';
+
+    try {
+      // POSTリクエスト送信 (no-corsモードは使用せず、text/plainで送信)
+      const response = await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(form)
+      });
+      
+      const resData = await response.json();
+
+      if (resData.ok) {
+        // 成功時：フォームを隠して完了画面を表示
+        window.scrollTo(0, 0);
+        document.getElementById('shop-container').style.display = 'none';
+        document.getElementById('thanks-screen').style.display = 'block';
+      } else {
+        throw new Error(resData.error || '不明なエラー');
+      }
+
+    } catch (e) {
+      console.error(e);
+      btn.disabled = false;
+      btn.innerText = "注文を確定する";
+      document.getElementById('submit-error').innerText = "送信エラーが発生しました: " + e.message;
+      document.getElementById('submit-error').style.display = "block";
+      alert("送信に失敗しました。時間をおいて再度お試しください。");
+    }
+  }
+</script>
+
+</body>
+</html>
