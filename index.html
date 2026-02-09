@@ -14,7 +14,7 @@
     display: flex; 
     flex-wrap: wrap; 
     gap: 15px; 
-    justify-content: center; /* 中央揃え */
+    justify-content: center;
     max-width: 1200px;
     margin: 0 auto;
   }
@@ -23,7 +23,7 @@
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 8px;
-    width: 160px; /* カードの幅 */
+    width: 160px;
     padding: 10px;
     text-align: center;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
@@ -38,7 +38,6 @@
     box-shadow: 0 8px 15px rgba(0,0,0,0.1);
   }
 
-  /* 選択時のスタイル */
   .item.selected {
     border: 2px solid #333;
     background-color: #fffbf0;
@@ -74,7 +73,7 @@
     text-align: center;
     border: 1px solid #ccc;
     border-radius: 4px;
-    font-size: 16px; /* スマホでのズーム防止 */
+    font-size: 16px;
   }
 
   /* === フッターフォーム === */
@@ -121,10 +120,9 @@
   #thanks-screen { display: none; text-align: center; padding: 60px 20px; }
   .error-msg { color: red; text-align: center; margin-top: 15px; display: none; font-weight: bold; }
 
-  /* レスポンシブ対応 */
   @media (max-width: 600px) {
     .product-grid { gap: 10px; }
-    .item { width: 45%; } /* スマホでは2列表示 */
+    .item { width: 45%; }
   }
 </style>
 </head>
@@ -181,13 +179,11 @@
 </div>
 
 <script>
-  // ★GASのウェブアプリURL (更新済み)
+  // ★最新のGAS URL (画像修正版)
   const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxR2bBiV6OAdQtNuT190TJBFyRkubhj2DA7LqXv9Z870eOh_0hs0VdlazXvNjWBIcnq/exec';
 
-  // 1. ページ読み込み完了時に商品データを取得
   document.addEventListener('DOMContentLoaded', async () => {
     try {
-      // GAS側へ商品リストをリクエスト
       const response = await fetch(`${GAS_API_URL}?op=getProducts`);
       const data = await response.json();
       
@@ -205,21 +201,20 @@
     }
   });
 
-  // 2. 商品リストを描画する関数
   function renderProducts(products) {
     const container = document.getElementById('product-list');
     
     products.forEach(p => {
-      // 画像URL生成 (Google DriveのIDを使用)
+      // ★画像リンク修正: lh3.googleusercontent.com を使用 (高速・安定)
+      // 末尾の =s400 はサイズ指定 (幅400px)
       const imgSrc = p.imageId 
-        ? `https://drive.google.com/uc?export=view&id=${p.imageId}`
-        : 'https://via.placeholder.com/150x150?text=No+Image'; // 画像がない場合のダミー
+        ? `https://lh3.googleusercontent.com/d/${p.imageId}=s400`
+        : 'https://via.placeholder.com/150x150?text=No+Image';
 
-      // HTMLカード生成
       const html = `
         <div class="item" data-hinban="${p.hinban}" data-price="${p.price}">
           <div class="img-container">
-            <img src="${imgSrc}" loading="lazy" alt="${p.hinban}">
+            <img src="${imgSrc}" loading="lazy" alt="${p.hinban}" referrerpolicy="no-referrer">
           </div>
           <div class="hinban">${p.hinban}</div>
           <div class="price">¥${Number(p.price).toLocaleString()}</div>
@@ -232,7 +227,6 @@
     });
   }
 
-  // 3. 数量変更時のスタイル制御
   function checkActive(input) {
     const item = input.closest('.item');
     const val = parseInt(input.value, 10);
@@ -247,9 +241,7 @@
     }
   }
 
-  // 4. 注文送信処理
   async function sendOrder() {
-    // 数量が1以上の商品のみ収集
     const items = [];
     document.querySelectorAll('.item').forEach(el => {
       const q = parseInt(el.querySelector('.order-qty').value, 10) || 0;
@@ -267,7 +259,6 @@
       return;
     }
 
-    // フォームデータの収集
     const form = {
       kaisha: document.getElementById('kaisha').value.trim(),
       tantousha: document.getElementById('tantousha').value.trim(),
@@ -277,20 +268,17 @@
       items: items
     };
 
-    // 必須項目のチェック
     if (!form.kaisha || !form.tantousha || !form.mail || !form.tel) {
       alert("必須項目(*)を入力してください。");
       return;
     }
 
-    // ボタンを無効化して送信中表示へ
     const btn = document.querySelector('.submit-btn');
     btn.disabled = true;
     btn.innerText = "送信中... (そのままお待ちください)";
     document.getElementById('submit-error').style.display = 'none';
 
     try {
-      // POSTリクエスト送信 (no-corsモードは使用せず、text/plainで送信)
       const response = await fetch(GAS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -300,7 +288,6 @@
       const resData = await response.json();
 
       if (resData.ok) {
-        // 成功時：フォームを隠して完了画面を表示
         window.scrollTo(0, 0);
         document.getElementById('shop-container').style.display = 'none';
         document.getElementById('thanks-screen').style.display = 'block';
